@@ -82,7 +82,9 @@ def run_generation(
         agents_with_context = book_agents.create_agents(initial_prompt, num_chapters)
         book_gen = BookGenerator(agents_with_context, agent_config, outline)
         book_gen.generate_book(outline)
-        chapters_generated = [str(path) for path in sorted(output_dir.glob("chapter_*.txt"))]
+        chapters_generated = [
+            str(path) for path in sorted(output_dir.glob("chapter_*.txt"))
+        ]
         notify("Book generation complete.")
     else:
         notify("Chapter generation skipped as requested.")

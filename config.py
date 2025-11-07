@@ -1,4 +1,5 @@
 """Configuration helpers for the book generation system."""
+
 import os
 from typing import Dict, Optional
 
@@ -30,11 +31,11 @@ def _build_local_config(url: str, model: Optional[str]) -> Dict:
     """Return a config entry targeting a local OpenAI-compatible endpoint."""
 
     raw_model = model or os.getenv("LOCAL_LLM_MODEL", DEFAULT_LOCAL_MODEL)
-    
+
     # For local models, try to resolve using presets but fall back to raw value
     # to maintain compatibility with custom local model names
     resolved_model = get_model_by_preset_key(raw_model)
-    
+
     return {
         "model": resolved_model,
         "base_url": url,
@@ -53,9 +54,11 @@ def _build_openrouter_config(model_override: Optional[str]) -> Dict:
         )
 
     base_url = os.getenv("OPENROUTER_BASE_URL", DEFAULT_OPENROUTER_BASE_URL)
-    
+
     # Resolve model using presets if applicable
-    raw_model = model_override or os.getenv("OPENROUTER_MODEL", DEFAULT_OPENROUTER_MODEL)
+    raw_model = model_override or os.getenv(
+        "OPENROUTER_MODEL", DEFAULT_OPENROUTER_MODEL
+    )
     model = get_model_by_preset_key(raw_model)
 
     # Optional headers recommended by OpenRouter

@@ -1,4 +1,5 @@
 """Main script for running the book generation system"""
+
 from generation_service import run_generation
 
 
@@ -46,7 +47,7 @@ def main() -> None:
     for chapter in outline:
         print(f"\nChapter {chapter['chapter_number']}: {chapter['title']}")
         print("-" * 50)
-        print(chapter['prompt'])
+        print(chapter["prompt"])
 
     if result["outline_path"]:
         print(f"\nOutline saved to: {result['outline_path']}")

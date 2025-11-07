@@ -8,41 +8,28 @@ import streamlit as st
 
 from generation_service import run_generation
 from model_presets import POPULAR_MODELS
-from ui.theme import set_page
+from ui.theme import card, render_sidebar_logo, set_page
 
 
 set_page("Generate | AI Book Writer")
+render_sidebar_logo("Tune your settings, then generate the book draft.")
 
-st.title("Generate Your Book")
+st.title("Generate your book")
+st.caption("Provide one idea to create outlines and draft chapters.")
 
-# Keep session state minimal
 if "progress_log" not in st.session_state:
     st.session_state["progress_log"] = []
 if "result" not in st.session_state:
     st.session_state["result"] = None
 
 
-with st.form("generation_form"):
-    prompt = st.text_area(
-        "Your Story Idea",
-        placeholder=(
-            "Describe the world, characters, plot, genre, tone, and any specific "
-            "requirements for your story..."
-        ),
-        height=200,
+with st.sidebar:
+    st.header("Settings")
+    provider_choice = st.selectbox(
+        "LLM Provider",
+        ("Local endpoint", "OpenRouter"),
+        index=1 if os.getenv("OPENROUTER_API_KEY") else 0,
     )
-
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        num_chapters = st.slider("Number of Chapters", min_value=1, max_value=40, value=10)
-    with col2:
-        provider_choice = st.selectbox(
-            "LLM Provider",
-            ("Local endpoint", "OpenRouter"),
-            index=1 if os.getenv("OPENROUTER_API_KEY") else 0,
-        )
-    with col3:
-        generate_book = st.checkbox("Generate full chapter drafts", value=False)
 
     use_openrouter = provider_choice == "OpenRouter"
 
@@ -58,7 +45,11 @@ with st.form("generation_form"):
                 help="Use the full provider/model name, e.g. openai/gpt-4o-mini",
             ).strip()
         else:
-            model_override = POPULAR_MODELS[selected]["id"]
+            preset = POPULAR_MODELS[selected]
+            model_override = preset["id"]
+            description = preset.get("description")
+            if description:
+                st.caption(description)
         endpoint_input: Optional[str] = None
     else:
         endpoint_input = st.text_input(
@@ -71,17 +62,46 @@ with st.form("generation_form"):
             value=os.getenv("LOCAL_LLM_MODEL", "Mistral-Nemo-Instruct-2407"),
         ).strip()
 
-    submitted = st.form_submit_button("Generate")
+    num_chapters = st.slider("Number of chapters", min_value=1, max_value=40, value=10)
+    generate_book = st.checkbox("Generate full chapter drafts", value=False)
+
+    st.divider()
+    st.caption("Tip: You can switch providers or adjust chapters at any time.")
+
+
+with st.form("generation_form"):
+    prompt = st.text_area(
+        "Your story idea",
+        placeholder=(
+            "Describe the world, characters, plot, genre, tone, and any specific "
+            "requirements for your story..."
+        ),
+        height=220,
+    )
+    submitted = st.form_submit_button(
+        "Generate",
+        type="primary",
+        use_container_width=True,
+    )
+
+
+log_area = st.empty()
 
 if submitted:
     st.session_state["progress_log"] = []
-    log_area = st.empty()
+
+    status_widget = getattr(st, "status", None)
+    status_container = (
+        status_widget("Preparing generation...", expanded=True)
+        if callable(status_widget)
+        else None
+    )
 
     def update_progress(message: str) -> None:
         st.session_state["progress_log"].append(message)
-        # Show last 10 messages
-        lines = st.session_state["progress_log"][-10:]
-        log_area.write("\n".join(lines))
+        log_area.write("\n".join(st.session_state["progress_log"][-10:]))
+        if status_container is not None:
+            status_container.update(label=message)
 
     sanitized_endpoint = (endpoint_input or "").strip() or None
 
@@ -96,41 +116,79 @@ if submitted:
                 generate_book=generate_book,
                 progress_callback=update_progress,
             )
+        if status_container is not None:
+            status_container.update(state="complete", label="Generation complete.")
         st.success("Generation complete.")
     except Exception as exc:
+        if status_container is not None:
+            status_container.update(state="error", label=f"Generation failed: {exc}")
         st.session_state["result"] = None
         st.error(f"Generation failed: {exc}")
 
 
 result = st.session_state.get("result")
 if result:
-    st.subheader("Outline")
-    outline = result.get("outline", [])
-    st.caption(f"Chapters: {len(outline)}")
-    for chapter in outline:
-        st.markdown(f"**Chapter {chapter['chapter_number']}: {chapter['title']}**")
-        st.write(chapter["prompt"])  # summary
+    outline_tab, chapters_tab, logs_tab = st.tabs(["Outline", "Chapters", "Logs"])
 
-    outline_path = result.get("outline_path")
-    if outline_path:
-        try:
-            p = Path(outline_path)
-            with p.open("r", encoding="utf-8") as fh:
-                content = fh.read()
-            st.download_button("Download Outline", data=content, file_name=p.name, mime="text/plain")
-            st.caption(f"Saved to: {p}")
-        except OSError:
-            st.warning("Outline file could not be read.")
+    with outline_tab:
+        outline = result.get("outline", [])
+        if outline:
+            st.caption(f"Chapters: {len(outline)}")
+            for chapter in outline:
+                title = f"Chapter {chapter['chapter_number']}: {chapter['title']}"
+                card(title, "Outline", chapter["prompt"])
 
-    chapters = result.get("chapters", [])
-    if chapters:
-        st.subheader("Chapters")
-        for chapter_file in chapters:
+        else:
+            st.info("No outline was returned.")
+
+        outline_path = result.get("outline_path")
+        if outline_path:
+            try:
+                p = Path(outline_path)
+                content = p.read_text(encoding="utf-8")
+                download_cols = st.columns([1, 1])
+                with download_cols[0]:
+                    st.download_button(
+                        "Download outline",
+                        data=content,
+                        file_name=p.name,
+                        mime="text/plain",
+                        use_container_width=True,
+                    )
+                with download_cols[1]:
+                    st.caption(f"Saved to: {p}")
+            except OSError:
+                st.warning("Outline file could not be read.")
+
+    with chapters_tab:
+        chapters = result.get("chapters", [])
+        if not chapters:
+            st.info("Generate full chapters to see downloads here.")
+        for index, chapter_file in enumerate(chapters, start=1):
             p = Path(chapter_file)
             try:
-                with p.open("r", encoding="utf-8") as fh:
-                    content = fh.read()
-                st.write(p.stem.replace("_", " ").title())
-                st.download_button("Download", data=content, file_name=p.name, mime="text/plain")
+                content = p.read_text(encoding="utf-8")
             except OSError:
                 st.warning(f"Could not read {p}.")
+                continue
+
+            with st.expander(f"Chapter {index}: {p.stem.replace('_', ' ').title()}"):
+                st.write(content)
+                download_cols = st.columns([1, 1])
+                with download_cols[0]:
+                    st.download_button(
+                        "Download chapter",
+                        data=content,
+                        file_name=p.name,
+                        mime="text/plain",
+                        use_container_width=True,
+                    )
+                with download_cols[1]:
+                    st.caption(f"Saved to: {p}")
+
+    with logs_tab:
+        logs = st.session_state.get("progress_log", [])
+        if logs:
+            st.code("\n".join(logs[-200:]), language="text")
+        else:
+            st.caption("Logs will appear here while generation is running.")
