@@ -1,6 +1,8 @@
 """Define the agents used in the book generation system with improved context management"""
+
 import autogen
 from typing import Dict, List, Optional
+
 
 class BookAgents:
     def __init__(self, agent_config: Dict, outline: Optional[List[Dict]] = None):
@@ -9,24 +11,26 @@ class BookAgents:
         self.outline = outline
         self.world_elements = {}  # Track described locations/elements
         self.character_developments = {}  # Track character arcs
-        
+
     def _format_outline_context(self) -> str:
         """Format the book outline into a readable context"""
         if not self.outline:
             return ""
-            
+
         context_parts = ["Complete Book Outline:"]
         for chapter in self.outline:
-            context_parts.extend([
-                f"\nChapter {chapter['chapter_number']}: {chapter['title']}",
-                chapter['prompt']
-            ])
+            context_parts.extend(
+                [
+                    f"\nChapter {chapter['chapter_number']}: {chapter['title']}",
+                    chapter["prompt"],
+                ]
+            )
         return "\n".join(context_parts)
 
     def create_agents(self, initial_prompt, num_chapters) -> Dict:
         """Create and return all agents needed for book generation"""
         outline_context = self._format_outline_context()
-        
+
         # Memory Keeper: Maintains story continuity and context
         memory_keeper = autogen.AssistantAgent(
             name="memory_keeper",
@@ -48,11 +52,11 @@ class BookAgents:
             - Flag issues with 'CONTINUITY ALERT:'""",
             llm_config=self.agent_config,
         )
-        
+
         # Story Planner - Focuses on high-level story structure
         story_planner = autogen.AssistantAgent(
             name="story_planner",
-            system_message=f"""You are an expert story arc planner focused on overall narrative structure.
+            system_message="""You are an expert story arc planner focused on overall narrative structure.
 
             Your sole responsibility is creating the high-level story arc.
             When given an initial story premise:
@@ -206,10 +210,7 @@ class BookAgents:
         user_proxy = autogen.UserProxyAgent(
             name="user_proxy",
             human_input_mode="TERMINATE",
-            code_execution_config={
-                "work_dir": "book_output",
-                "use_docker": False
-            }
+            code_execution_config={"work_dir": "book_output", "use_docker": False},
         )
 
         return {
@@ -219,14 +220,16 @@ class BookAgents:
             "writer": writer,
             "editor": editor,
             "user_proxy": user_proxy,
-            "outline_creator": outline_creator
+            "outline_creator": outline_creator,
         }
 
     def update_world_element(self, element_name: str, description: str) -> None:
         """Track a new or updated world element"""
         self.world_elements[element_name] = description
 
-    def update_character_development(self, character_name: str, development: str) -> None:
+    def update_character_development(
+        self, character_name: str, development: str
+    ) -> None:
         """Track character development"""
         if character_name not in self.character_developments:
             self.character_developments[character_name] = []
@@ -236,19 +239,25 @@ class BookAgents:
         """Get formatted world-building context"""
         if not self.world_elements:
             return "No established world elements yet."
-        
-        return "\n".join([
-            "Established World Elements:",
-            *[f"- {name}: {desc}" for name, desc in self.world_elements.items()]
-        ])
+
+        return "\n".join(
+            [
+                "Established World Elements:",
+                *[f"- {name}: {desc}" for name, desc in self.world_elements.items()],
+            ]
+        )
 
     def get_character_context(self) -> str:
         """Get formatted character development context"""
         if not self.character_developments:
             return "No character developments tracked yet."
-        
-        return "\n".join([
-            "Character Development History:",
-            *[f"- {name}:\n  " + "\n  ".join(devs) 
-              for name, devs in self.character_developments.items()]
-        ])
+
+        return "\n".join(
+            [
+                "Character Development History:",
+                *[
+                    f"- {name}:\n  " + "\n  ".join(devs)
+                    for name, devs in self.character_developments.items()
+                ],
+            ]
+        )

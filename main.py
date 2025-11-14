@@ -1,14 +1,9 @@
 """Main script for running the book generation system"""
-from config import get_config
-from agents import BookAgents
-from book_generator import BookGenerator
-from outline_generator import OutlineGenerator
 
-def main():
-    # Get configuration
-    agent_config = get_config()
+from generation_service import run_generation
 
-    
+
+def main() -> None:
     # Initial prompt for the book
     initial_prompt = """
     Create a story in my established writing style with these key elements:
@@ -44,43 +39,26 @@ def main():
     """
 
     num_chapters = 25
-    # Create agents
-    outline_agents = BookAgents(agent_config)
-    agents = outline_agents.create_agents(initial_prompt, num_chapters)
-    
-    # Generate the outline
-    outline_gen = OutlineGenerator(agents, agent_config)
-    print("Generating book outline...")
-    outline = outline_gen.generate_outline(initial_prompt, num_chapters)
-    
-    # Create new agents with outline context
-    book_agents = BookAgents(agent_config, outline)
-    agents_with_context = book_agents.create_agents(initial_prompt, num_chapters)
-    
-    # Initialize book generator with contextual agents
-    book_gen = BookGenerator(agents_with_context, agent_config, outline)
-    
-    # Print the generated outline
+
+    result = run_generation(initial_prompt, num_chapters)
+    outline = result["outline"]
+
     print("\nGenerated Outline:")
     for chapter in outline:
         print(f"\nChapter {chapter['chapter_number']}: {chapter['title']}")
         print("-" * 50)
-        print(chapter['prompt'])
-    
-    # Save the outline for reference
-    print("\nSaving outline to file...")
-    with open("book_output/outline.txt", "w") as f:
-        for chapter in outline:
-            f.write(f"\nChapter {chapter['chapter_number']}: {chapter['title']}\n")
-            f.write("-" * 50 + "\n")
-            f.write(chapter['prompt'] + "\n")
-    
-    # Generate the book using the outline
-    print("\nGenerating book chapters...")
-    if outline:
-        book_gen.generate_book(outline)
+        print(chapter["prompt"])
+
+    if result["outline_path"]:
+        print(f"\nOutline saved to: {result['outline_path']}")
+
+    if result["chapters"]:
+        print("\nGenerated Chapters:")
+        for chapter_file in result["chapters"]:
+            print(f"- {chapter_file}")
     else:
-        print("Error: No outline was generated.")
+        print("\nChapter generation skipped or no chapters were produced.")
+
 
 if __name__ == "__main__":
     main()

@@ -43,6 +43,16 @@ pip install -r requirements.txt
 
 ## Usage
 
+### Interactive UI
+
+Launch the Streamlit dashboard for a guided experience:
+
+```bash
+streamlit run streamlit_app.py
+```
+
+The UI lets you tweak the story prompt, choose the number of chapters, and decide whether to generate full chapters. Progress updates appear in real time, and you can download the outline and any generated chapters directly from the page.
+
 1. Basic usage:
 ```python
 from main import main
@@ -86,6 +96,41 @@ The system can be configured through `config.py`. Key configurations include:
 - Number of chapters
 - Agent parameters
 - Output directory settings
+
+### Choosing an LLM backend
+
+The system reads environment variables via `config.get_config()` so you can switch providers without touching code.
+By default it targets a local OpenAI-compatible endpoint at `http://localhost:1234/v1`, but it now understands OpenRouter as well.
+
+**Local endpoint variables**
+- `LOCAL_LLM_URL` sets the base URL (defaults to `http://localhost:1234/v1`)
+- `LOCAL_LLM_MODEL` overrides the model name passed to the server
+- `LOCAL_LLM_API_KEY` is only needed if your local server enforces auth
+
+**OpenRouter variables**
+- `OPENROUTER_API_KEY` (required) authenticates every request
+- `OPENROUTER_MODEL` chooses the model id (defaults to `openai/gpt-4o-mini`)
+  - You can use preset keys like `gpt-4o-mini`, `claude-3-haiku`, `llama-3.1-70b`, etc.
+  - Or use full model IDs like `openai/gpt-4o-mini`, `anthropic/claude-3-haiku`, etc.
+  - Check [OpenRouter's model list](https://openrouter.ai/models) for all available models
+- `OPENROUTER_BASE_URL` lets you point to a custom OpenRouter gateway
+- `OPENROUTER_HTTP_REFERER` and `OPENROUTER_APP_TITLE` add optional headers
+
+Set `LLM_TIMEOUT` (seconds) if you need to override the default 600 second request timeout.
+
+When `OPENROUTER_API_KEY` is present and you do not pass a `local_url`, `get_config()` automatically uses OpenRouter.
+The Streamlit UI exposes the same choice with a provider selector; if you choose OpenRouter it will prompt for a model id and warn when the key is missing.
+
+**Popular preset model options:**
+- `gpt-4o-mini` - Fast, affordable model for everyday tasks
+- `gpt-4o` - Advanced model for complex tasks  
+- `claude-3-haiku` - Fast, intelligent model from Anthropic
+- `claude-3-sonnet` - Balanced model for everyday use
+- `claude-3-opus` - Most powerful Claude model
+- `llama-3.1-70b` - Powerful open-source model
+- `llama-3.1-405b` - Most powerful open-source model (free tier)
+- `gemini-pro` - Google's flagship model
+- `command-r-plus` - Great for reasoning and complex tasks
 
 ## Output Structure
 
