@@ -1,6 +1,7 @@
 """Define the API client for book generation system"""
 from openai import OpenAI
 from typing import Dict, List, Optional
+import httpx
 
 class BookAgents:
     def __init__(self, agent_config: Dict, outline: Optional[List[Dict]] = None):
@@ -13,7 +14,8 @@ class BookAgents:
         # Initialize OpenAI client
         self.client = OpenAI(
             base_url=self.agent_config["config_list"][0]["base_url"],
-            api_key=self.agent_config["config_list"][0]["api_key"]
+            api_key=self.agent_config["config_list"][0]["api_key"],
+            timeout=httpx.Timeout(self.agent_config["timeout"])
         )
         self.model = self.agent_config["config_list"][0]["model"]
         
