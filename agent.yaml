@@ -1,0 +1,33 @@
+spec_version: "0.1.0"
+name: ai-book-writer
+version: 1.0.0
+description: >
+  A collaborative multi-agent book-writing system built on AutoGen. Six specialized
+  agents work in concert to produce full-length, structured narratives from a single
+  premise: a Story Planner lays out the arc, an Outline Creator sequences chapters,
+  a World Builder establishes settings, a Memory Keeper tracks continuity, a Writer
+  produces prose (5 000+ words per chapter), and an Editor polishes every draft before
+  it is committed to disk. The system runs locally against any OpenAI-compatible
+  endpoint (default: Mistral-Nemo-Instruct via LM Studio).
+license: MIT
+model:
+  preferred: "mistral:Mistral-Nemo-Instruct-2407"
+skills:
+  - name: story-planning
+    description: Builds the high-level story arc — plot points, character arcs, story beats, and key narrative transitions.
+  - name: outline-creation
+    description: Generates a detailed N-chapter outline in a strict, machine-parseable format.
+  - name: world-building
+    description: Establishes all settings, locations, atmospheres, and sensory details needed across the full narrative.
+  - name: memory-keeping
+    description: Tracks chapter events, character developments, and world details; flags continuity errors.
+  - name: prose-writing
+    description: Produces the actual chapter prose, maintaining character voice and incorporating world-building context.
+  - name: editing
+    description: Reviews drafts against the outline, checks quality and consistency, and returns a fully edited chapter.
+runtime:
+  max_turns: 200
+compliance:
+  risk_tier: standard
+  supervision:
+    human_in_the_loop: destructive
